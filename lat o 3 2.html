@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<title>Quản lý điểm phát biểu theo lớp</title>
+<style>
+  body {
+    font-family: sans-serif;
+    margin: 20px;
+  }
+  #class-controls, #add-student-form {
+    margin-bottom: 20px;
+  }
+  #class-controls select, #class-controls input, #add-student-form input {
+    padding: 5px;
+    margin-right: 10px;
+  }
+  #class-controls button, #add-student-form button {
+    padding: 5px 10px;
+  }
+  table {
+    border-collapse: collapse;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 600px;
+  }
+  th, td {
+    border: 1px solid #333;
+    padding: 8px;
+    text-align: center;
+  }
+  .score-input {
+    width: 50px;
+    text-align: right;
+  }
+  button {
+    cursor: pointer;
+  }
+  .delete-student-btn {
+    background-color: red;
+    color: #fff;
+    border: none;
+    padding: 2px 6px;
+    margin-left: 5px;
+  }
+</style>
+</head>
+<body>
+<h1>Quản lý điểm phát biểu theo lớp</h1>
+
+<div id="class-controls">
+  <select id="class-select"></select>
+  <input type="text" id="new-class" placeholder="Nhập tên lớp mới">
+  <button onclick="addClass()">Thêm lớp</button>
+  <button onclick="deleteClass()">Xoá lớp hiện tại</button>
+</div>
+
+<div id="add-student-form">
+  <input type="text" id="student-name" placeholder="Nhập tên học sinh">
+  <button onclick="addStudent()">Thêm học sinh</button>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Tên học sinh</th>
+      <th>Điểm</th>
+      <th>Biểu tượng</th>
+      <th>Tăng điểm</th>
+      <th>Nhập điểm</th>
+      <th>Xoá</th>
+    </tr>
+  </thead>
+  <tbody id="student-list"></tbody>
+</table>
+
+<script>
+let classData = {};
+let currentClass = "";
+
+const iconMilestones = [
+  {score:200, icon:"🛸 UFO"},
+  {score:150, icon:"🌌 Galaxy"},
+  {score:120, icon:"🦄 Unicorn"},
+  {score:100, icon:"🌈 Rainbow"},
+  {score:90,  icon:"🚀 Rocket"},
+  {score:80,  icon:"💎 Diamond"},
+  {score:70,  icon:"👑 Crown"},
+  {score:60,  icon:"🌟 Star"},
+  {score:50,  icon:"🔥 Dragon"},
+  {score:40,  icon:"🔨 Thor hammer"},
+  {score:30,  icon:"🦅 Phoenix"},
+  {score:20,  icon:"🪐 Saturn planet"},
+  {score:10,  icon:"🛡 Captain shield"}
+];
+
+function getIcon(score) {
+  for (let i = 0; i < iconMilestones.length; i++) {
+    if (score >= iconMilestones[i].score) {
+      return iconMilestones[i].icon;
+    }
+  }
+  return "";
+}
+
+function loadData() {
+  let stored = localStorage.getItem('classData');
+  if (stored) {
+    classData = JSON.parse(stored);
+  }
+  updateClassSelect();
+}
+
+function saveData() {
+  localStorage.setItem('classData', JSON.stringify(classData));
+}
+
+function updateClassSelect() {
+  const select = document.getElementById('class-select');
+  select.innerHTML = '';
+  for (let cls in classData) {
+    let option = document.createElement('option');
+    option.value = cls;
+    option.textContent = cls;
+    select.appendChild(option);
+  }
+  if (!currentClass && Object.keys(classData).length > 0) {
+    currentClass = Object.keys(classData)[0];
+  } else if (!classData[currentClass]) {
+    currentClass = Object.keys(classData)[0] || "";
+  }
+  select.value = currentClass;
+  renderStudents();
+}
+
+function addClass() {
+  const input = document.getElementById('new-class');
+  const clsName = input.value.trim();
+  if (clsName && !classData[clsName]) {
+    classData[clsName] = [];
+    currentClass = clsName;
+    input.value = '';
+    saveData();
+    updateClassSelect();
+  }
+}
+
+function deleteClass() {
+  if (currentClass && classData[currentClass]) {
+    if (confirm("Bạn có chắc chắn muốn xoá lớp: " + currentClass + "?")) {
+      delete classData[currentClass];
+      saveData();
+      updateClassSelect();
+    }
+  }
+}
+
+function addStudent() {
+  const nameInput = document.getElementById('student-name');
+  const name = nameInput.value.trim();
+  if (name && currentClass) {
+    classData[currentClass].push({ name: name, score: 0 });
+    nameInput.value = "";
+    saveData();
+    renderStudents();
+  }
+}
+
+function deleteStudent(index) {
+  if (currentClass && classData[currentClass] && classData[currentClass][index]) {
+    if (confirm("Xoá học sinh: " + classData[currentClass][index].name + "?")) {
+      classData[currentClass].splice(index, 1);
+      saveData();
+      renderStudents();
+    }
+  }
+}
+
+function renderStudents() {
+  const tbody = document.getElementById('student-list');
+  tbody.innerHTML = '';
+  if (!currentClass || !classData[currentClass]) return;
+  
+  for (let i = 0; i < classData[currentClass].length; i++) {
+    const student = classData[currentClass][i];
+    const tr = document.createElement('tr');
+
+    const tdName = document.createElement('td');
+    tdName.textContent = student.name;
+    tr.appendChild(tdName);
+
+    const tdScore = document.createElement('td');
+    tdScore.className = "score";
+    tdScore.textContent = student.score;
+    tr.appendChild(tdScore);
+
+    const tdIcon = document.createElement('td');
+    tdIcon.className = "icon";
+    tdIcon.textContent = getIcon(student.score);
+    tr.appendChild(tdIcon);
+
+    const tdButton = document.createElement('td');
+    const button = document.createElement('button');
+    button.textContent = "+1";
+    button.onclick = () => { addPoints(i); };
+    tdButton.appendChild(button);
+    tr.appendChild(tdButton);
+
+    const tdInput = document.createElement('td');
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.className = 'score-input';
+    input.value = student.score;
+    input.onchange = () => { setScore(i, parseInt(input.value,10)); };
+    tdInput.appendChild(input);
+    tr.appendChild(tdInput);
+
+    const tdDelete = document.createElement('td');
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-student-btn';
+    delBtn.textContent = 'X';
+    delBtn.onclick = () => { deleteStudent(i); };
+    tdDelete.appendChild(delBtn);
+    tr.appendChild(tdDelete);
+
+    tbody.appendChild(tr);
+  }
+}
+
+function addPoints(index) {
+  if (!currentClass) return;
+  classData[currentClass][index].score += 1;
+  saveData();
+  renderStudents();
+}
+
+function setScore(index, newScore) {
+  if (!currentClass) return;
+  if (isNaN(newScore) || newScore < 0) newScore = 0;
+  classData[currentClass][index].score = newScore;
+  saveData();
+  renderStudents();
+}
+
+document.getElementById('class-select').addEventListener('change', function() {
+  currentClass = this.value;
+  renderStudents();
+});
+
+loadData();
+</script>
+</body>
+</html>
